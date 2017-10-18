@@ -14,7 +14,7 @@ const router = require('./router.js');
 
 app.use(bodyParser({ encode: 'utf8' }));
 app.use(router());
-app.use(staticFile('images/screenshots'));
+app.use(staticFile(__dirname));
 
 app.listen(port, () => {
     log.info(`App listens at port ${port}...`);

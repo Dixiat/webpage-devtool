@@ -12,13 +12,21 @@ const { screenshot } = require('./scripts/screenshot.js');
 // Args
 const imgDir = 'images/screenshots';
 
+// Launcher Chrome
+let browserInstance, browserWSEndpoint;
+(async () => {
+    browserInstance = await puppeteer.launch();
+    browserWSEndpoint = browserInstance.wsEndpoint();
+    browserInstance.disconnect();
+})();
+
 const screenCapture = (url, args = {}) => {
 
     return new Promise(async (resolve, reject) => {
-        // Launcher Chrome
-        const browser = await puppeteer.launch();
+        // Connect Browser
+        const browser = await puppeteer.connect({ browserWSEndpoint });
 
-        // Extract used Devtools domains
+        // Extract Used Devtools Domains
         const page = await browser.newPage();
 
         // Emulate iPhone6
@@ -26,25 +34,31 @@ const screenCapture = (url, args = {}) => {
 
         // Monitor Console, Response and Error Events
         page.on('console', (...args) => console.debug(...args));
-        page.on('error', err => {
+        page.on('error', async (err) => {
             log.error('Cannot connect to browser:', err);
-            browser.close();
+            await browser.disconnect();
             reject(err);
+            return;
         });
 
-        // Navigate to target page
-        await page.goto(url, { waitUntil: 'load' });
+        // Navigate to Target Page
+        try {
+            await page.goto(url, { waitUntil: 'load', timeout: 60 * 1000 });
+        } catch (e) {
+            await browser.disconnect();
+            reject(e);
+            return;
+        }
 
         setTimeout(async () => {
+            log.info('Start screen capturing...');
             // Evaluate Script to Get Widget Rect & Html
-            const script = `(${screenshot.toString()}).apply(this);`;
-            const result = await page.evaluate(script, args);
-            log.debug('result', result);
+            const result = await page.evaluate(screenshot, args);
 
-            // combine style into html
+            // Combine Style into Html
             const html = result.html;
 
-            // take screenshot & return htmlContent
+            // Take Screenshot
             const rect = JSON.parse(result.rect);
             // log.debug('rect', rect);
             for (var id in rect) {
@@ -54,18 +68,14 @@ const screenCapture = (url, args = {}) => {
                     x: rect[id].left,
                     y: rect[id].top,
                 };
-                const data = await page.screenshot({ type: 'jpeg', clip: viewport });
-                const buffer = new Buffer(data, 'base64');
-                fs.writeFileSync(`${imgDir}/${id}.jpeg`, buffer, 'base64');
+                await page.screenshot({ type: 'jpeg', path: `${imgDir}/${id}.jpeg`, clip: viewport });
             }
 
             // log.debug('html', html);
 
-            browser.close();
+            await browser.disconnect();
             resolve(html);
         }, 5000);
-
-
     });
 };
 

@@ -1,6 +1,6 @@
 const screenshot = () => {
     var widgetRectMap = {},
-    heightUnit = 9000;
+    heightUnit = 8192;
     try {
         let content = document.body,
             pid = uuid();
