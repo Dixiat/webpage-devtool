@@ -2,18 +2,21 @@ const fs = require('fs'),
       path = require('path');
 
 const log = require('./log.js');
+const { logDivider } = require('./middleware.js');
 
 function addMapping(router, mapping) {
     for (const req in mapping) {
         switch (true) {
         case req.startsWith('GET'):
             var path = req.substring(4);
-            router.get(path, mapping[req]);
+            router.use(path, logDivider)
+                  .get(path, mapping[req]);
             log.info(`Register req mapping: ${req}`);
             break;
         case req.startsWith('POST'):
             var path = req.substring(5);
-            router.post(path, mapping[req]);
+            router.use(path, logDivider)
+                  .post(path, mapping[req]);
             log.info(`Register req mapping: ${req}`);
             break;
         default:

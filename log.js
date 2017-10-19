@@ -12,18 +12,24 @@ class Log {
         };
     }
 
-    output(level, data, args) {
-        const time = `${[utils.getTimeStr()]}`,
+    output({ type, level, data, args }) {
+        if (type === 'newline') {
+            console.log();
+            return;
+        }
+        const time = `[${utils.getTimeStr()}]`,
               hint = `(\x1b[1m${this.logColor[level]}${level}\x1b[0m)`;
 
         console.log(time, hint, data, ...args);
     }
 
-    debug(data, ...args) { this.output('DEBUG', data, args); }
-    info(data, ...args) { this.output('INFO', data, args); }
-    warn(data, ...args) { this.output('WARN', data, args); }
-    error(data, ...args) { this.output('ERROR', data, args); }
-    fatal(data, ...args) { this.output('FATAL', data, args); }
+    debug(data, ...args) { this.output({ type: 'message', level: 'DEBUG', data, args }); }
+    info(data, ...args) { this.output({ type: 'message', level: 'INFO', data, args }); }
+    warn(data, ...args) { this.output({ type: 'message', level: 'WARN', data, args }); }
+    error(data, ...args) { this.output({ type: 'message', level: 'ERROR', data, args }); }
+    fatal(data, ...args) { this.output({ type: 'message', level: 'FATAL', data, args }); }
+
+    newline() { this.output({ type: 'newline' }) }
 }
 
 module.exports = new Log();
