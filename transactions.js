@@ -21,8 +21,16 @@ let browserInstance, browserWSEndpoint;
 })();
 
 const screenCapture = (url, args = {}) => {
+    let timeoutID,
+        resources = {},
+        receivedImages = 0,
+        domImages = 0,
+        isCapturing = false;
 
     return new Promise(async (resolve, reject) => {
+        //Show up Screenshot Info
+        log.info(`ScreenCapture - <${url}>`)
+
         // Connect Browser
         const browser = await puppeteer.connect({ browserWSEndpoint });
 
@@ -32,7 +40,7 @@ const screenCapture = (url, args = {}) => {
         // Emulate iPhone6
         await page.emulate(iPhone);
 
-        // Monitor Console, Response and Error Events
+        // Monitor Console, Request and Error Events
         page.on('console', (...args) => console.debug(...args));
         page.on('error', async (err) => {
             log.error('Cannot connect to browser:', err);
@@ -40,42 +48,93 @@ const screenCapture = (url, args = {}) => {
             reject(err);
             return;
         });
+        page.on('request', request => {
+            if (isCapturing) return;
+
+            if (request.resourceType === 'image') {
+                const { url } = request;
+                resources[url] = true;
+                timeoutID && clearTimeout(timeoutID);
+            }
+        })
+        page.on('requestfinished', request => {
+            if (isCapturing) return;
+
+            const { resourceType, _response } = request,
+                  { url } = _response;
+
+            if (resourceType === 'image') {
+                delete resources[url];
+                receivedImages++;
+                timeoutID && clearTimeout(timeoutID);
+                if (timeoutID && !Object.keys(resources).length) {
+                    initScreenshotTimeout();
+                }
+            }
+        });
 
         // Navigate to Target Page
         try {
-            await page.goto(url, { waitUntil: 'load', timeout: 60 * 1000 });
+            await page.goto(url, { waitUntil: 'networkidle', networkIdleTimeout: 3 * 1000, timeout: 60 * 1000 });
         } catch (e) {
             await browser.disconnect();
             reject(e);
             return;
         }
 
-        setTimeout(async () => {
-            log.info('Start screen capturing...');
-            // Evaluate Script to Get Widget Rect & Html
-            const result = await page.evaluate(screenshot, args);
+        // Scroll to Load Image(Lazy-load)
+        await page.evaluate(async () => {
+            var i = 0;
+            var scrollCount = Math.floor(document.body.scrollHeight / window.innerHeight);
+            await new Promise((resolve, reject) => {
+                var intervalID = setInterval(function() {
+                    if (i >= scrollCount) {
+                        window.scrollTo(0, 0);
+                        clearInterval(intervalID);
+                        resolve(true);
+                        return;
+                    }
+                    window.scrollBy(0, window.innerHeight);
+                    i++;
+                }, 300);
+            });
+        });
 
-            // Combine Style into Html
-            const html = result.html;
+        domImages = await page.$$eval('img', imgs => imgs.length);
 
-            // Take Screenshot
-            const rect = JSON.parse(result.rect);
-            // log.debug('rect', rect);
-            for (var id in rect) {
-                const viewport = {
-                    width: rect[id].width,
-                    height: rect[id].height,
-                    x: rect[id].left,
-                    y: rect[id].top,
-                };
-                await page.screenshot({ type: 'jpeg', path: `${imgDir}/${id}.jpeg`, clip: viewport });
-            }
+        initScreenshotTimeout();
 
-            // log.debug('html', html);
+        function initScreenshotTimeout() {
+            timeoutID = setTimeout(async () => {
+                if (receivedImages < domImages) return;
 
-            await browser.disconnect();
-            resolve(html);
-        }, 5000);
+                log.info('Start screen capturing...');
+                isCapturing = true;
+                // Evaluate Script to Get Widget Rect & Html
+                const result = await page.evaluate(screenshot, args);
+
+                // Combine Style into Html
+                const html = result.html;
+
+                // Take Screenshot
+                const rect = JSON.parse(result.rect);
+                // log.debug('rect', rect);
+                for (var id in rect) {
+                    const viewport = {
+                        width: rect[id].width,
+                        height: rect[id].height,
+                        x: rect[id].left,
+                        y: rect[id].top,
+                    };
+                    await page.screenshot({ type: 'jpeg', path: `${imgDir}/${id}.jpeg`, clip: viewport });
+                }
+
+                // log.debug('html', html);
+
+                await browser.disconnect();
+                resolve(html);
+            }, 1 * 1000);
+        }
     });
 };
 

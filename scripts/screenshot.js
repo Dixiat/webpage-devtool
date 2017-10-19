@@ -1,19 +1,20 @@
 const screenshot = () => {
     var widgetRectMap = {},
-    heightUnit = 8192;
+        heightUnit = 8192;
     try {
         let content = document.body,
             pid = uuid();
         const rect = widgetRectMap[pid] = content.getBoundingClientRect();
 
         var wrapper = document.createElement('section');
-        var rectLength = rect.height;
+        var rectLength = rect.height = Math.max(rect.height, content.scrollHeight);
+
         var img;
         if (rectLength > heightUnit) {  // 截图长度超过heightUnit会造成截图不完整的问题
             var bottom = 0, top = 0;
 
             for (var i = 0; i < rectLength; i += heightUnit) {
-                var height = rect.height - i;
+                var height = rectLength - i;
                 if (height > heightUnit) {
                     height = heightUnit;
                 }
