@@ -1,5 +1,5 @@
 // import modules
-const fs = require('fs');
+const uuid = require('uuid/v1');
 const puppeteer = require('puppeteer');
 const devices = require('puppeteer/DeviceDescriptors');
 const iPhone = devices['iPhone 6'];
@@ -110,29 +110,27 @@ const screenCapture = (url, args = {}) => {
 
                 log.info('Start screen capturing...');
                 isCapturing = true;
-                // Evaluate Script to Get Widget Rect & Html
+                // Evaluate Script to Get Page Rect
                 const result = await page.evaluate(screenshot, args);
 
-                // Combine Style into Html
-                const html = result.html;
-
                 // Take Screenshot
-                const rect = JSON.parse(result.rect);
-                // log.debug('rect', rect);
-                for (var id in rect) {
+                const screenshots = [];
+                const rects = JSON.parse(result.rects);
+                // log.debug('rects', rects);
+                for (var id in rects) {
                     const viewport = {
-                        width: rect[id].width,
-                        height: rect[id].height,
-                        x: rect[id].left,
-                        y: rect[id].top,
+                        width: rects[id].width,
+                        height: rects[id].height,
+                        x: rects[id].left,
+                        y: rects[id].top,
                     };
-                    await page.screenshot({ type: 'jpeg', path: `${imgDir}/${id}.jpeg`, clip: viewport });
+                    const path = `${imgDir}/${uuid()}.jpeg`;
+                    await page.screenshot({ type: 'jpeg', path, clip: viewport });
+                    screenshots.push(path);
                 }
 
-                // log.debug('html', html);
-
                 await browser.disconnect();
-                resolve(html);
+                resolve(screenshots);
             }, 1 * 1000);
         }
     });

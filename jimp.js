@@ -1,5 +1,5 @@
 const jimp = require('jimp');
-const { uuid } = require('./utils');
+const uuid = require('uuid/v1');
 
 /**
  * 新建图像(默认背景为白色)
@@ -95,6 +95,10 @@ const writeImage = (image, filename) => {
  * @returns {String}
  */
 const spliceImage = async (path, fileList, ext = 'jpeg', dir) => {
+    if (fileList.length <= 1) {
+        return fileList[0] || '';
+    }
+
     const images = await getAllImages(path, fileList);
     let dstImageHeight = 0,
         dstImageWidth = 0;
