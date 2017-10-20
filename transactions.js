@@ -15,7 +15,7 @@ const imgDir = 'images/screenshots';
 // Launcher Chrome
 let browserInstance, browserWSEndpoint;
 (async () => {
-    browserInstance = await puppeteer.launch();
+    browserInstance = await puppeteer.launch({ headless: true });
     browserWSEndpoint = browserInstance.wsEndpoint();
     browserInstance.disconnect();
 })();
@@ -41,7 +41,7 @@ const screenCapture = (url, args = {}) => {
         await page.emulate(iPhone);
 
         // Monitor Console, Request and Error Events
-        page.on('console', (...args) => console.debug(...args));
+        // page.on('console', (...args) => console.debug(...args));
         page.on('error', async (err) => {
             log.error('Cannot connect to browser:', err);
             await browser.disconnect();
@@ -136,6 +136,42 @@ const screenCapture = (url, args = {}) => {
     });
 };
 
+const googleSearch = query => {
+    let searchResult = [];
+
+    return new Promise(async (resolve, reject) => {
+        log.info(`Google search: <${query}>`);
+        const browser = await puppeteer.connect({ browserWSEndpoint });
+        const page = await browser.newPage();
+
+        try {
+            await page.goto('https://www.google.co.jp', { waitUntil: 'load', timeout: 30 * 1000});
+        } catch (error) {
+            await browser.disconnect();
+            reject(error);
+            return;
+        }
+
+        // await page.focus('input#lst-ib');
+        await page.keyboard.type('input#lst-ib', query, { delay: 1000 });
+        await page.click('input[type="submit"]');
+
+        await page.waitFor(4 * 1000);
+
+        searchResult = await page.$$eval('.srg .rc a', links => {
+            let result = [];
+            for (const link of links) {
+                result.push({ text: link.innerText, url: link.href });
+            }
+            return result;
+        });
+
+        await browser.disconnect();
+        resolve(searchResult);
+    });
+};
+
 module.exports = {
-    screenCapture
+    screenCapture,
+    googleSearch
 };

@@ -17,7 +17,7 @@ const route4screenshot = async (ctx, next) => {
         log.info('ScreenCapture successful!');
         ctx.response.body = { url: imgPath };
     } catch(error) {
-        log.error('ScreenCapture error:', error);
+        log.error('ScreenCapture error:', error.message);
         ctx.response.body = { errcode: -1, errmsg: error.message };
     }
 };
