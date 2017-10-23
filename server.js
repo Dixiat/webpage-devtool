@@ -19,6 +19,6 @@ app.use(router());
 app.use(staticFile(__dirname));
 
 // start server
-app.listen(port, () => {
+const server = app.listen(port, () => {
     log.info(`App listens at port ${port}...`);
 });

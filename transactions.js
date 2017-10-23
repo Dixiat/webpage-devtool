@@ -44,6 +44,7 @@ const screenCapture = (url, args = {}) => {
         // page.on('console', (...args) => console.debug(...args));
         page.on('error', async (err) => {
             log.error('Cannot connect to browser:', err);
+            await page.close();
             await browser.disconnect();
             reject(err);
             return;
@@ -77,6 +78,7 @@ const screenCapture = (url, args = {}) => {
         try {
             await page.goto(url, { waitUntil: 'networkidle', networkIdleTimeout: 3 * 1000, timeout: 60 * 1000 });
         } catch (e) {
+            await page.close();
             await browser.disconnect();
             reject(e);
             return;
@@ -129,6 +131,7 @@ const screenCapture = (url, args = {}) => {
                     screenshots.push(path);
                 }
 
+                await page.close();
                 await browser.disconnect();
                 resolve(screenshots);
             }, 1 * 1000);
@@ -146,28 +149,28 @@ const googleSearch = query => {
 
         try {
             await page.goto('https://www.google.co.jp', { waitUntil: 'load', timeout: 30 * 1000});
+
+            await page.focus('input#lst-ib');
+            await page.keyboard.type(query, { delay: 100 });
+            await page.keyboard.press('Enter');
+
+            await page.waitForNavigation({ waitUntil: 'load' });
+
+            searchResult = await page.$$eval('.srg .rc .r a', links => {
+                let result = [];
+                for (const link of links) {
+                    result.push({ text: link.innerText, url: link.href });
+                }
+                return result;
+            });
+
+            resolve(searchResult);
         } catch (error) {
-            await browser.disconnect();
             reject(error);
-            return;
         }
 
-        // await page.focus('input#lst-ib');
-        await page.keyboard.type('input#lst-ib', query, { delay: 1000 });
-        await page.click('input[type="submit"]');
-
-        await page.waitFor(4 * 1000);
-
-        searchResult = await page.$$eval('.srg .rc a', links => {
-            let result = [];
-            for (const link of links) {
-                result.push({ text: link.innerText, url: link.href });
-            }
-            return result;
-        });
-
+        await page.close();
         await browser.disconnect();
-        resolve(searchResult);
     });
 };
 
