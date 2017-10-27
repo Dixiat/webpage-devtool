@@ -1,4 +1,5 @@
 // import modules
+const { URL } = require('url');
 const uuid = require('uuid/v1');
 const puppeteer = require('puppeteer');
 const devices = require('puppeteer/DeviceDescriptors');
@@ -11,6 +12,7 @@ const { screenshot } = require('./scripts/screenshot.js');
 
 // Args
 const imgDir = 'images/screenshots';
+const traceDir = 'records/traces';
 
 // Launcher Chrome
 let browserInstance, browserWSEndpoint;
@@ -20,6 +22,14 @@ let browserInstance, browserWSEndpoint;
     browserInstance.disconnect();
 })();
 
+
+/**
+ * 网页截图（完整）
+ * @function
+ * @param {String} url
+ * @param {Object} [args = {}]
+ * @returns {String}
+ */
 const screenCapture = (url, args = {}) => {
     let timeoutID,
         resources = {},
@@ -139,6 +149,13 @@ const screenCapture = (url, args = {}) => {
     });
 };
 
+
+/**
+ * 谷歌搜索
+ * @function
+ * @param {String} query
+ * @returns {Array}
+ */
 const googleSearch = query => {
     let searchResult = [];
 
@@ -174,7 +191,40 @@ const googleSearch = query => {
     });
 };
 
+
+/**
+ * 访问网页并生成性能分析报告
+ * @function
+ * @param {String} url
+ * @returns {String}
+ */
+const trace = url => {
+    const urlObj = new URL(url);
+
+    return new Promise(async (resolve, reject) => {
+        log.info(`Trace performance: <${url}>`);
+        const browser = await puppeteer.connect({ browserWSEndpoint });
+        const page = await browser.newPage();
+
+
+        try {
+            const path = `${traceDir}/${urlObj.hostname}_${uuid()}.json`;
+            await page.tracing.start({ path });
+            await page.goto(url, { waitUntil: 'load', timeout: 30 * 1000 });
+            await page.tracing.stop();
+
+            resolve(path);
+        } catch (error) {
+            reject(error);
+        }
+
+        await page.close();
+        await browser.disconnect();
+    });
+};
+
 module.exports = {
     screenCapture,
-    googleSearch
+    googleSearch,
+    trace
 };

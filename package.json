@@ -5,7 +5,7 @@
     "main": "server.js",
     "scripts": {
         "start": "node server.js --port 3000",
-        "clean": "rimraf images/screenshots/*"
+        "clean": "rimraf images/screenshots/*, records/traces/*"
     },
     "author": "YangQiming",
     "license": "ISC",
