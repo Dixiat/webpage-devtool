@@ -1,5 +1,6 @@
 // import modules
 const opts = require('opts');
+const fs = require('fs');
 
 class Utils {
     constructor() {
@@ -70,6 +71,16 @@ class Utils {
 
     getOpts(key, defaultValue) {
         return this._opts.get(key) || defaultValue;
+    }
+
+    createDirs(...dirnames) {
+        for (let dirname of dirnames) {
+            const dirs = dirname && dirname.split('/');
+            if (!fs.existsSync(dirname) && dirs) {
+                this.createDirs(dirs.slice(0, dirs.length - 1).join('/'));
+                fs.mkdirSync(dirname);
+            }
+        }
     }
 }
 

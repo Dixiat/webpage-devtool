@@ -6,6 +6,7 @@ const devices = require('puppeteer/DeviceDescriptors');
 const iPhone = devices['iPhone 6'];
 
 const log = require('./log.js');
+const utils = require('./utils.js');
 
 // import scripts
 const { screenshot } = require('./scripts/screenshot.js');
@@ -13,6 +14,9 @@ const { screenshot } = require('./scripts/screenshot.js');
 // Args
 const imgDir = 'images/screenshots';
 const traceDir = 'records/traces';
+
+// checkout & create directories
+utils.createDirs(imgDir, traceDir);
 
 // Launcher Chrome
 let browserInstance, browserWSEndpoint;
